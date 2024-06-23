@@ -1,4 +1,13 @@
-import pieceMoves from "./pieceMoves.js";
+import {
+  isValidPawnMove,
+  isValidRookMove,
+  isValidKnightMove,
+  isValidBishopMove,
+  isValidQueenMove,
+  isValidKingMove,
+} from "./legalMove";
+
+import { handleCapture } from "./fight";
 
 const chessboard = document.getElementById("chessboard");
 
@@ -47,8 +56,9 @@ function createBoard() {
       if (piece) {
         const pieceElement = document.createElement("div");
         pieceElement.classList.add("piece");
-        pieceElement.dataset.color = row < 4 ? "white" : "black";
-        pieceElement.textContent = pieces[row < 4 ? "white" : "black"][piece];
+        pieceElement.dataset.color = row < 2 ? "white" : "black";
+        pieceElement.dataset.type = piece;
+        pieceElement.textContent = pieces[row < 2 ? "white" : "black"][piece];
         pieceElement.draggable = true;
         square.appendChild(pieceElement);
       }
@@ -58,12 +68,70 @@ function createBoard() {
   }
 }
 
+function getBoardState() {
+  const board = [];
+  for (let row = 0; row < 8; row++) {
+    board[row] = [];
+    for (let col = 0; col < 8; col++) {
+      const square = chessboard.querySelector(
+        `[data-row='${row}'][data-col='${col}']`
+      );
+      const piece = square.children[0];
+      board[row][col] = piece ? piece : null;
+    }
+  }
+  return board;
+}
+
 function isValidMove(targetSquare, piece) {
-  return (
-    (targetSquare.children.length === 0 ||
-      targetSquare.children[0] === piece) &&
-    piece.dataset.color === currentTurn
+  const startRow = parseInt(piece.parentElement.dataset.row);
+  const startCol = parseInt(piece.parentElement.dataset.col);
+  const endRow = parseInt(targetSquare.dataset.row);
+  const endCol = parseInt(targetSquare.dataset.col);
+  const targetPiece = targetSquare.children[0];
+  const board = getBoardState();
+
+  console.log(
+    `Checking move for piece: ${piece.dataset.type} from (${startRow}, ${startCol}) to (${endRow}, ${endCol})`
   );
+
+  if (targetPiece && targetPiece.dataset.color === piece.dataset.color) {
+    console.log(
+      `Invalid move: Cannot move to a square occupied by your own piece.`
+    );
+    return false;
+  }
+
+  switch (piece.dataset.type) {
+    case "pawn":
+      return isValidPawnMove(
+        startRow,
+        startCol,
+        endRow,
+        endCol,
+        piece,
+        targetPiece
+      );
+    case "rook":
+      return isValidRookMove(startRow, startCol, endRow, endCol, piece, board);
+    case "knight":
+      return isValidKnightMove(startRow, startCol, endRow, endCol);
+    case "bishop":
+      return isValidBishopMove(
+        startRow,
+        startCol,
+        endRow,
+        endCol,
+        piece,
+        board
+      );
+    case "queen":
+      return isValidQueenMove(startRow, startCol, endRow, endCol, piece, board);
+    case "king":
+      return isValidKingMove(startRow, startCol, endRow, endCol);
+    default:
+      return false;
+  }
 }
 
 function switchTurn() {
@@ -98,9 +166,7 @@ function implementDragAndDrop() {
       draggedPiece &&
       isValidMove(targetSquare, draggedPiece)
     ) {
-      if (targetSquare.children.length > 0) {
-        targetSquare.removeChild(targetSquare.children[0]);
-      }
+      handleCapture(targetSquare, draggedPiece);
       targetSquare.appendChild(draggedPiece);
       switchTurn();
     } else if (draggedPiece) {
@@ -127,6 +193,7 @@ function implementTouchInteraction() {
         selectedPiece.classList.add("selected");
       } else if (element.classList.contains("square") && selectedPiece) {
         if (isValidMove(element, selectedPiece)) {
+          handleCapture(element, selectedPiece);
           movePiece(element);
           switchTurn();
         } else {
