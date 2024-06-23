@@ -9,7 +9,7 @@ Welcome to the Chess repository!
 Install project with npm.
 
 ```bash
-  git clone https://github.com/IP80808080/Central-Railway-CMS.git
+  git clone https://github.com/IP80808080/Chess-in-1hr.git
 ```
     
 ## Running Application
